@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SpeakFlow 2.1</title><style>
+<title>SpeakFlow 2.2</title><style>
 :root{font-family:system-ui,-apple-system,Arial,sans-serif;color:#202634;background:#f5f7fb}
 *{box-sizing:border-box}body{margin:0;padding:18px}.app{max-width:520px;margin:0 auto}
 header,.top,.actions,.modes{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -30,10 +30,17 @@ header{margin-bottom:18px}h1{font-size:23px;margin:0}.sub{font-size:12px;color:#
 .activation .bar{background:#6385bf;min-width:18px;flex:1;border-radius:4px 4px 0 0}
 footer{text-align:center;font-size:12px;color:#778092;margin-top:17px}
 .hidden{display:none!important}.muted{color:#7c8594}
+
+body{padding-bottom:112px}
+.actions{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);padding:12px 18px max(12px,env(safe-area-inset-bottom));background:#f5f7fb;box-shadow:0 -5px 18px #18233b18;z-index:20;margin:0}
+.actions #next{background:#264a87;color:white;font-weight:700}
+.voicebar{margin:10px 0 14px;background:#eef3fc;padding:12px;border-radius:13px;font-size:14px}
+.voicebar label{display:flex;gap:9px;align-items:center}
+#cue{font-size:20px;font-weight:650;color:#264a87;text-align:center;margin:8px 0}
 </style></head><body><main class="app">
 <header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
 <div class="modes"><button id="listen" class="active">Listen & Repeat</button><button id="recall">Active Recall</button></div>
-<section class="card"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
+<div class="voicebar"><label><input id="voiceMode" type="checkbox"> 🎧 Голосовой режим: русская фраза → английский ответ → следующая</label><div class="sub" style="margin-top:6px">Для запуска нажми «Начать голосовую тренировку». Держи Chrome открытым.</div><button id="voiceStart" class="primary" style="margin-top:8px;width:100%">▶ Начать голосовую тренировку</button><button id="voiceStop" class="secondary hidden" style="margin-top:8px;width:100%">■ Остановить</button></div><section class="card"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
 <div class="phrase" id="phrase"></div><div class="transcription" id="transcription"></div><p class="translation" id="translation"></p>
 <div id="details"><div class="hint" id="hint"><div class="label">Нажми на выделенный участок фразы</div><div id="hintBody" class="muted" style="font-size:14px">Здесь появятся IPA и короткое правило.</div></div>
 <div class="transcription-settings"><label for="transMode">Транскрипция</label><select id="transMode"><option value="natural">Разговорная</option><option value="clear">IPA · Clear</option><option value="both">Обе</option><option value="none">Скрыть</option></select></div><div class="audio"><button id="clear">🔊 Clear Speech</button><button id="natural">🔊 Natural Speech</button></div></div>
@@ -41,7 +48,7 @@ footer{text-align:center;font-size:12px;color:#778092;margin-top:17px}
   <div class="clockline hidden" id="clockline"><div><div class="sub">ВРЕМЯ ДО НАЧАЛА РЕЧИ</div><div class="clock" id="timer">0,0 с</div></div><span id="speed" class="sub">● Отсчёт идёт</span></div>
   <button class="mic" id="mic">🎙️ Произнести ответ</button>
   <div class="status" id="micStatus">Слушаю… произнеси английскую фразу.</div>
-  <div class="result" id="activationResult" aria-live="polite"></div>
+  <div id="cue" aria-live="polite"></div><div class="result" id="activationResult" aria-live="polite"></div>
   <div class="stats hidden" id="activationStats"></div>
 </div>
 <button class="primary hidden" style="width:100%;margin-top:12px" id="reveal">Показать ответ</button>
@@ -77,13 +84,23 @@ const transcriptions=[
 const $=id=>document.getElementById(id);
 let index=0,mode="listen",revealed=false,selected=-1;
 let startAt=performance.now(), elapsed=0, finished=false, recognizer=null, listening=false, lastAnswer="", feedback="", speechStartedAt=null, micMessage="";
+let voiceActive=false,voiceToken=0,cueTimer=null,voiceAdvanceTimer=null,hintCount=0,attemptedSpeech=false;
+function cancelCue(){clearTimeout(cueTimer);cueTimer=null}
+function cueDelay(){const a=(history[cards[index].en]||[]).slice(-8);const good=a.filter(x=>x.correct&&(!x.hints));if(good.length>=3)return 12000;if(a.length>=3&&good.length===0)return 7000;return 10000}
+function startCues(){cancelCue();hintCount=0;$("cue").textContent="";function tick(){if(mode!=="recall"||finished||attemptedSpeech)return;const words=cards[index].en.split(/\\s+/);if(hintCount<words.length){hintCount++;const hint=words.slice(0,hintCount).join(" ")+" …";$("cue").textContent=hint;if(voiceActive)voiceSay(hint,"en-US",()=>{});cueTimer=setTimeout(tick,5000)}}cueTimer=setTimeout(tick,cueDelay())}
+function voiceSay(message,lang,onDone){if(!("speechSynthesis" in window)){onDone?.();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(message);u.lang=lang;u.rate=lang==="ru-RU"?0.95:0.9;u.onend=()=>onDone?.();u.onerror=()=>onDone?.();speechSynthesis.speak(u)}
+function voicePrompt(){if(!voiceActive||mode!=="recall")return;const token=++voiceToken;stopRecognition();cancelCue();resetActivation();render();$("micStatus").textContent="Слушай русскую фразу…";voiceSay(cards[index].ru,"ru-RU",()=>{if(!voiceActive||token!==voiceToken)return;startAt=performance.now();startCues();startMic()})}
+function stopVoice(){voiceActive=false;voiceToken++;clearTimeout(voiceAdvanceTimer);cancelCue();if("speechSynthesis" in window)speechSynthesis.cancel();stopRecognition();$("voiceStop").classList.add("hidden");$("voiceStart").classList.remove("hidden")}
+$("voiceStart").onclick=()=>{if(!$("voiceMode").checked)$("voiceMode").checked=true;voiceActive=true;$("voiceStart").classList.add("hidden");$("voiceStop").classList.remove("hidden");mode="recall";voicePrompt()};
+$("voiceStop").onclick=()=>{stopVoice();render()};
+$("voiceMode").onchange=()=>{if(!$("voiceMode").checked)stopVoice()};
 let history={};try{history=JSON.parse(localStorage.getItem("speakflow-activation-history-v1")||"{}")}catch(e){}
 function saveHistory(){try{localStorage.setItem("speakflow-activation-history-v1",JSON.stringify(history))}catch(e){}}
 function clockSeconds(){return finished?elapsed:(performance.now()-startAt)/1000}
 function formatSec(x){return x.toFixed(1).replace(".",",")+" с"}
 function speedClass(t){return t<=3?"green":t<=7?"amber":"red"}
 function speedLabel(t){return t<=3?"● Быстро":t<=7?"● Средне":"● Пока медленно"}
-function resetActivation(){stopRecognition();startAt=performance.now();elapsed=0;finished=false;lastAnswer="";feedback="";revealed=false;speechStartedAt=null;micMessage=""}
+function resetActivation(){cancelCue();attemptedSpeech=false;stopRecognition();startAt=performance.now();elapsed=0;finished=false;lastAnswer="";feedback="";revealed=false;speechStartedAt=null;micMessage=""}
 function stopRecognition(){if(recognizer){const r=recognizer;recognizer=null;try{r.abort()}catch(e){}}listening=false}
 function normalized(s){return s.toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z'\s]/g," ").replace(/\s+/g," ").trim()}
 function statsRender(){const data=history[cards[index].en]||[];const successes=data.filter(x=>x.correct);const box=$("activationStats");box.replaceChildren();
@@ -95,19 +112,19 @@ recent.forEach(x=>{const b=document.createElement("div");b.className="bar";b.sty
 else{const p=document.createElement("div");p.className="muted";p.textContent="Пока нет правильных ответов.";box.append(p)}
 }
 function updateClock(){if(mode!=="recall")return;$("timer").textContent=formatSec(clockSeconds());const t=clockSeconds();$("speed").textContent=finished?"● "+(t<=3?"Быстро":t<=7?"Средне":"Медленно"):speedLabel(t);$("speed").className="sub "+speedClass(t)}
-function recordAnswer(text){if(mode!=="recall"||finished)return;const correct=normalized(text)===normalized(cards[index].en);lastAnswer=text;
-if(correct){elapsed=speechStartedAt===null?clockSeconds():Math.max(0,(speechStartedAt-startAt)/1000);finished=true;stopRecognition();const key=cards[index].en;const old=(history[key]||[]).filter(x=>x.correct).at(-1);(history[key]??=[]).push({correct:true,seconds:Math.round(elapsed*10)/10,date:new Date().toISOString(),recognized:text});saveHistory();
-feedback="✓ Правильно! "+formatSec(elapsed)+(old?" · "+(elapsed<old.seconds?"Быстрее":"Медленнее")+" на "+formatSec(Math.abs(old.seconds-elapsed)):"");revealed=true;render()}
-else{(history[cards[index].en]??=[]).push({correct:false,seconds:Math.round(clockSeconds()*10)/10,date:new Date().toISOString(),recognized:text});saveHistory();feedback="Распознано: «"+text+"». Не совпало — попробуй ещё раз.";speechStartedAt=null;render()}}
+function recordAnswer(text){if(mode!=="recall"||finished)return;attemptedSpeech=true;cancelCue();const correct=normalized(text)===normalized(cards[index].en);lastAnswer=text;
+if(correct){elapsed=speechStartedAt===null?clockSeconds():Math.max(0,(speechStartedAt-startAt)/1000);finished=true;stopRecognition();const key=cards[index].en;const old=(history[key]||[]).filter(x=>x.correct).at(-1);(history[key]??=[]).push({correct:true,seconds:Math.round(elapsed*10)/10,date:new Date().toISOString(),recognized:text,hints:hintCount});saveHistory();
+feedback="✓ Правильно! "+formatSec(elapsed)+(old?" · "+(elapsed<old.seconds?"Быстрее":"Медленнее")+" на "+formatSec(Math.abs(old.seconds-elapsed)):"");revealed=true;render();if(voiceActive){const token=voiceToken;voiceSay("Верно","ru-RU",()=>{if(voiceActive&&token===voiceToken)move(1)})}}
+else{(history[cards[index].en]??=[]).push({correct:false,seconds:Math.round(clockSeconds()*10)/10,date:new Date().toISOString(),recognized:text,hints:hintCount});saveHistory();feedback="Распознано: «"+text+"». Не совпало — попробуй ещё раз.";speechStartedAt=null;render();if(voiceActive){voiceSay("Попробуй ещё раз","ru-RU",()=>{if(voiceActive){attemptedSpeech=false;startCues();startMic()}})}}}
 function startMic(){if(mode!=="recall"||finished)return;const R=window.SpeechRecognition||window.webkitSpeechRecognition;
 if(!R){micMessage="В этом браузере нет поддержки распознавания речи." ;$("micStatus").textContent="Распознавание речи недоступно в этом браузере. Попробуй Chrome через HTTPS.";return}
 if(!window.isSecureContext){micMessage="Файл открыт без защищённого HTTPS-адреса. Открой SpeakFlow на HTTPS-сайте.";$("micStatus").textContent=micMessage;return}
 stopRecognition();micMessage="";const r=new R();recognizer=r;r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;r.continuous=false;listening=true;
 $("micStatus").textContent="Слушаю… произнеси английскую фразу.";$("mic").textContent="🎙️ Слушаю…";
-r.onspeechstart=()=>{if(recognizer===r&&speechStartedAt===null)speechStartedAt=performance.now()};
+r.onspeechstart=()=>{cancelCue();if(recognizer===r&&speechStartedAt===null)speechStartedAt=performance.now()};
 r.onresult=e=>{if(recognizer!==r)return;const heard=e.results[0][0].transcript;listening=false;recognizer=null;recordAnswer(heard)};
 r.onerror=e=>{if(recognizer!==r)return;recognizer=null;listening=false;micMessage=e.error==="not-allowed"?"Доступ к микрофону запрещён. Разреши его для этого сайта в Chrome.":e.error==="no-speech"?"Речь не обнаружена. Проверь микрофон и попробуй ещё раз.":e.error==="network"?"Ошибка сети при распознавании. Проверь интернет и попробуй снова.":"Ошибка микрофона: "+e.error;$("micStatus").textContent=micMessage;$("mic").textContent="🎙️ Произнести ответ"};
-r.onend=()=>{if(recognizer!==r)return;recognizer=null;listening=false;$("mic").textContent="🎙️ Произнести ответ";if(!finished)$("micStatus").textContent="Нажми на микрофон, чтобы попробовать снова."};
+r.onend=()=>{if(recognizer!==r)return;recognizer=null;listening=false;$("mic").textContent="🎙️ Произнести ответ";if(!finished){$("micStatus").textContent="Нажми на микрофон, чтобы попробовать снова.";if(voiceActive&&!micMessage){startMic()}}};
 try{r.start()}catch(e){recognizer=null;listening=false;$("micStatus").textContent="Не удалось включить микрофон: "+e.message}}
 
 
@@ -136,12 +153,12 @@ if(selected>=0&&c.parts[selected]&&$("showMarks").checked){const x=c.parts[selec
 }
 function speak(natural){if(!("speechSynthesis" in window)){alert("Озвучивание не поддерживается этим браузером.");return}const key=cards[index].en;counts[key]=(counts[key]||0)+1;persist();$("count").textContent=counts[key];speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(natural?cards[index].natural:cards[index].en);u.lang="en-US";u.rate=natural?1.03:0.78;const voices=speechSynthesis.getVoices();u.voice=voices.find(v=>v.lang.replace("_","-").toLowerCase()==="en-us")||null;speechSynthesis.speak(u)}
 $("clear").onclick=()=>speak(false);$("natural").onclick=()=>speak(true);
-$("listen").onclick=()=>{stopRecognition();mode="listen";revealed=false;selected=-1;render()};
-$("recall").onclick=()=>{mode="recall";selected=-1;resetActivation();render();startMic()};
-$("reveal").onclick=()=>{if(mode==="recall"&&!finished){elapsed=clockSeconds();finished=true;stopRecognition();feedback="Ответ открыт без проверки. Время не засчитано."; }revealed=true;render()};
-$("mic").onclick=()=>{speechStartedAt=null;startMic()};
+$("listen").onclick=()=>{stopVoice();mode="listen";revealed=false;selected=-1;render()};
+$("recall").onclick=()=>{mode="recall";selected=-1;resetActivation();render();startCues();startMic()};
+$("reveal").onclick=()=>{cancelCue();if(mode==="recall"&&!finished){elapsed=clockSeconds();finished=true;stopRecognition();feedback="Ответ открыт без проверки. Время не засчитано."; }revealed=true;render()};
+$("mic").onclick=()=>{speechStartedAt=null;attemptedSpeech=false;startCues();startMic()};
 
-function move(delta){stopRecognition();index=(index+delta+cards.length)%cards.length;revealed=false;selected=-1;if(mode==="recall")resetActivation();if("speechSynthesis" in window)speechSynthesis.cancel();render();if(mode==="recall")startMic()}
+function move(delta){cancelCue();stopRecognition();index=(index+delta+cards.length)%cards.length;revealed=false;selected=-1;if(mode==="recall")resetActivation();if("speechSynthesis" in window)speechSynthesis.cancel();render();if(mode==="recall"){if(voiceActive)voicePrompt();else{startCues();startMic()}}}
 $("prev").onclick=()=>move(-1);$("next").onclick=()=>move(1);try{$("showMarks").checked=localStorage.getItem("speakflow-show-marks")!=="false"}catch(e){}
 $("showMarks").onchange=()=>{try{localStorage.setItem("speakflow-show-marks",String($("showMarks").checked))}catch(e){}selected=-1;render()};render();
 </script></body></html>
