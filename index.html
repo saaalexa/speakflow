@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SpeakFlow 2.2</title><style>
+<title>SpeakFlow 2.0.1</title><style>
 :root{font-family:system-ui,-apple-system,Arial,sans-serif;color:#202634;background:#f5f7fb}
 *{box-sizing:border-box}body{margin:0;padding:18px}.app{max-width:520px;margin:0 auto}
 header,.top,.actions,.modes{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -38,9 +38,9 @@ body{padding-bottom:112px}
 .voicebar label{display:flex;gap:9px;align-items:center}
 #cue{font-size:20px;font-weight:650;color:#264a87;text-align:center;margin:8px 0}
 </style></head><body><main class="app">
-<header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
+<header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0.1</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
 <div class="modes"><button id="listen" class="active">Listen & Repeat</button><button id="recall">Active Recall</button></div>
-<div class="voicebar"><label><input id="voiceMode" type="checkbox"> 🎧 Голосовой режим: русская фраза → английский ответ → следующая</label><div class="sub" style="margin-top:6px">Для запуска нажми «Начать голосовую тренировку». Держи Chrome открытым.</div><button id="voiceStart" class="primary" style="margin-top:8px;width:100%">▶ Начать голосовую тренировку</button><button id="voiceStop" class="secondary hidden" style="margin-top:8px;width:100%">■ Остановить</button></div><section class="card"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
+<div class="voicebar" id="voiceBar"><label><input id="voiceMode" type="checkbox"> 🎧 Голосовой режим: русская фраза → английский ответ → следующая</label><div class="sub" style="margin-top:6px">Для запуска нажми «Начать голосовую тренировку». Держи Chrome открытым.</div><button id="voiceStart" class="primary" style="margin-top:8px;width:100%">▶ Начать голосовую тренировку</button><button id="voiceStop" class="secondary hidden" style="margin-top:8px;width:100%">■ Остановить</button></div><section class="card"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
 <div class="phrase" id="phrase"></div><div class="transcription" id="transcription"></div><p class="translation" id="translation"></p>
 <div id="details"><div class="hint" id="hint"><div class="label">Нажми на выделенный участок фразы</div><div id="hintBody" class="muted" style="font-size:14px">Здесь появятся IPA и короткое правило.</div></div>
 <div class="transcription-settings"><label for="transMode">Транскрипция</label><select id="transMode"><option value="natural">Разговорная</option><option value="clear">IPA · Clear</option><option value="both">Обе</option><option value="none">Скрыть</option></select></div><div class="audio"><button id="clear">🔊 Clear Speech</button><button id="natural">🔊 Natural Speech</button></div></div>
@@ -137,6 +137,7 @@ function render(){const c=cards[index];$("index").textContent=`${index+1} / ${ca
 $("listen").classList.toggle("active",mode==="listen");$("recall").classList.toggle("active",mode==="recall");
 $("modeLabel").textContent=mode==="listen"?"Listen & Repeat":"Active Recall";
 const visible=mode==="listen"||revealed;
+$("voiceBar").classList.toggle("hidden",mode!=="recall");
 $("activation").classList.toggle("hidden",mode!=="recall");
 if(mode==="recall"){$("mic").disabled=finished;$("mic").textContent=finished?"✓ Ответ принят":listening?"🎙️ Слушаю…":"🎙️ Произнести ответ";
 $("micStatus").textContent=finished?"Попытка завершена. Перейди к следующей фразе.":listening?"Слушаю… произнеси английскую фразу.":(micMessage||"Слушаю тебя…");
