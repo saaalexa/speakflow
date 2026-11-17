@@ -1,55 +1,164 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SpeakFlow 2.3</title>
-<style>
-:root{font-family:system-ui,-apple-system,sans-serif;color:#1c2941;background:#f3f6fc}*{box-sizing:border-box}body{margin:0;padding:16px 14px 95px}.wrap{max-width:620px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;margin:8px 0 20px}h1{font-size:25px;margin:0}small,.muted{color:#65738c}.panel{background:white;border-radius:20px;padding:18px;margin:13px 0;box-shadow:0 4px 18px #1523440b}.tabs{display:flex;gap:7px;overflow:auto}.tabs button{flex:1;white-space:nowrap}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tile{border:1px solid #dbe3f1;border-radius:14px;padding:16px;text-align:center;cursor:pointer}.tile strong{display:block;font-size:19px;margin:6px}button,select,input,textarea{font:inherit}button{border:0;border-radius:11px;padding:12px 14px;background:#e8eef9;color:#254779;cursor:pointer}button.primary{background:#284f91;color:white}button:disabled{opacity:.45}button.active{background:#284f91;color:white}input,textarea,select{width:100%;border:1px solid #cbd5e5;border-radius:10px;padding:11px;background:white;color:#1c2941}label{display:block;font-size:13px;color:#596981;margin:10px 0 5px}.phrase{font-size:26px;font-weight:650;text-align:center;line-height:1.5;margin:26px 0}.answer{font-size:21px;text-align:center;color:#264f8b;margin:12px}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1}.hidden{display:none!important}.status{font-size:13px;line-height:1.6;color:#53647e;margin:12px 0}.row{display:flex;align-items:center;gap:8px}.row>*{flex:1}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{background:#f1f5fc;border-radius:12px;padding:12px;text-align:center}.stat strong{display:block;font-size:22px}.item{border-top:1px solid #e6ebf4;padding:12px 0}.item:first-child{border:0}.bottom{position:fixed;bottom:0;left:0;right:0;background:#f3f6fcf5;padding:10px 14px max(12px,env(safe-area-inset-bottom));box-shadow:0 -3px 14px #15234415}.bottom>div{max-width:620px;margin:auto;display:flex;gap:8px}.bottom button{flex:1} .pill{display:inline-block;background:#e9f0fc;border-radius:30px;padding:5px 9px;font-size:12px}.warn{color:#986322}
-</style></head><body><div class="wrap">
-<header><div><h1>SpeakFlow <small>2.3</small></h1><small id="subtitle"></small></div><button onclick="show('settings')">⚙</button></header>
-<div class="tabs"><button id="tab-home" onclick="show('home')"></button><button id="tab-train" onclick="show('train')"></button><button id="tab-add" onclick="show('add')"></button><button id="tab-stats" onclick="show('stats')"></button></div>
-<section id="home" class="panel"><h2 id="homeTitle"></h2><div class="grid"><div class="tile" onclick="choose('en')">🇬🇧<strong>English</strong><small id="enCount"></small></div><div class="tile" onclick="choose('fr')">🇫🇷<strong>Français</strong><small id="frCount"></small></div></div><p class="status" id="homeInfo"></p></section>
-<section id="train" class="panel hidden"><div class="row"><select id="target" onchange="choose(this.value)"><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 Français</option></select><select id="mode" onchange="restart()"><option value="due"></option><option value="hard"></option><option value="all"></option></select></div><div class="status" id="queueInfo"></div><div class="phrase" id="prompt"></div><div class="answer hidden" id="solution"></div><div class="status" id="feedback"></div><div class="actions"><button onclick="speakPrompt()">🔊 <span id="hearPrompt"></span></button><button onclick="listen()">🎙️ <span id="answerBtn"></span></button><button onclick="reveal()" id="revealBtn"></button></div><div class="actions" style="margin-top:9px"><button onclick="rate(0)" id="againBtn"></button><button onclick="rate(1)" id="goodBtn" class="primary"></button></div><p class="status" id="speechNote"></p></section>
-<section id="add" class="panel hidden"><h2 id="addTitle"></h2><label id="langLabel"></label><select id="addTarget"><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 Français</option></select><label id="sourceLabel"></label><select id="sourceLang"><option value="ru">Русский</option><option value="en">English</option><option value="fr">Français</option><option value="ar">العربية</option><option value="fa">فارسی</option></select><label id="phrasesLabel"></label><textarea id="batch" rows="5" placeholder="Одна фраза на строку"></textarea><div class="actions"><button onclick="dictate()">🎙️ <span id="dictateBtn"></span></button><button onclick="translateBatch()" class="primary" id="translateBtn"></button></div><p class="status" id="translateStatus"></p><div id="drafts"></div><button class="primary hidden" id="saveAll" onclick="saveDrafts()"></button></section>
-<section id="stats" class="panel hidden"><h2 id="statsTitle"></h2><select id="statLang" onchange="renderStats()"><option value="en">🇬🇧 English</option><option value="fr">🇫🇷 Français</option></select><div class="stats" id="statsGrid"></div><div id="statsList"></div></section>
-<section id="settings" class="panel hidden"><h2 id="settingsTitle"></h2><label id="uiLabel"></label><select id="uiLang" onchange="setUI(this.value)"><option value="ru">Русский</option><option value="en">English</option><option value="fr">Français</option></select><p class="status" id="storageNote"></p><div class="actions"><button onclick="backup()" id="exportBtn"></button><button onclick="document.getElementById('importFile').click()" id="importBtn"></button></div><input id="importFile" class="hidden" type="file" accept=".json" onchange="restore(event)"></section>
-</div><div class="bottom"><div><button onclick="previous()" id="prevBtn"></button><button onclick="next()" class="primary" id="nextBtn"></button></div></div>
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpeakFlow 2.2</title><style>
+:root{font-family:system-ui,-apple-system,Arial,sans-serif;color:#202634;background:#f5f7fb}
+*{box-sizing:border-box}body{margin:0;padding:18px}.app{max-width:520px;margin:0 auto}
+header,.top,.actions,.modes{display:flex;align-items:center;justify-content:space-between;gap:10px}
+header{margin-bottom:18px}h1{font-size:23px;margin:0}.sub{font-size:12px;color:#657080}
+.card{background:white;border-radius:22px;padding:22px;box-shadow:0 5px 22px #18233b12}
+.modes{margin-bottom:18px}button{cursor:pointer;border:0;border-radius:12px;padding:12px 14px;font:inherit}
+.modes button{flex:1;background:#e8edf6;font-size:13px}.modes button.active{background:#243e70;color:white}
+.top{font-size:12px;color:#657080}.count{white-space:nowrap}
+.phrase{font-size:27px;line-height:1.65;text-align:center;margin:28px 0 9px;font-weight:650}
+.transcription{text-align:center;color:#53617a;font-size:14px;line-height:1.6;margin:0 0 8px;overflow-wrap:anywhere}.transcription div+div{margin-top:3px}.transcription .tag{font-size:10px;color:#8a93a2;margin-right:5px}.transcription-settings{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:10px 0 0;font-size:12px;color:#657080}.transcription-settings select{font:inherit;border:1px solid #d6dce7;background:white;border-radius:9px;padding:6px 8px;color:#243e70}.translation{text-align:center;color:#6a7281;font-size:15px;margin:0 0 20px}
+.mark{display:inline;border:0;border-bottom:2px dotted #cf8b25;border-radius:0;background:#fff3d9;padding:1px 2px;color:inherit;font:inherit;font-weight:inherit;line-height:inherit}
+.mark.selected{background:#ffdf9b}.hint{background:#f3f6fc;border-radius:13px;padding:14px;margin:15px 0;min-height:92px}
+.hint .label{font-size:12px;color:#586a88;margin-bottom:6px}.ipa{font-size:21px;font-weight:600;margin:5px 0}.hint p{margin:7px 0 0;font-size:14px;line-height:1.5}
+.audio{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:15px}
+.audio button{background:#e9effb;color:#1d3d72;font-size:14px}.actions{margin-top:14px}.actions button{flex:1}
+.primary{background:#264a87;color:white}.secondary{background:#e8edf6}.small{font-size:12px;color:#6d7686;text-align:center;margin:12px 0}
+.activation{margin-top:12px;padding:15px;border-radius:15px;background:#f2f5fb}
+.activation .clock{font-size:29px;font-weight:700;font-variant-numeric:tabular-nums}
+.activation .clockline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.activation .status{font-size:13px;color:#55627a;margin-top:9px;line-height:1.5}
+.activation .result{font-size:14px;line-height:1.55;margin-top:10px}
+.activation .stats{margin-top:12px;border-top:1px solid #dce3f0;padding-top:10px;font-size:13px}
+.activation .mic{background:#264a87;color:white;width:100%;margin-top:12px}
+.activation .mic:disabled{opacity:.55}
+.activation .green{color:#17804c}.activation .amber{color:#9a6500}.activation .red{color:#b73535}
+.activation .history{display:flex;align-items:flex-end;gap:5px;min-height:66px;margin-top:8px}
+.activation .bar{background:#6385bf;min-width:18px;flex:1;border-radius:4px 4px 0 0}
+footer{text-align:center;font-size:12px;color:#778092;margin-top:17px}
+.hidden{display:none!important}.muted{color:#7c8594}
+
+body{padding-bottom:112px}
+.actions{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:min(520px,100%);padding:12px 18px max(12px,env(safe-area-inset-bottom));background:#f5f7fb;box-shadow:0 -5px 18px #18233b18;z-index:20;margin:0}
+.actions #next{background:#264a87;color:white;font-weight:700}
+.voicebar{margin:10px 0 14px;background:#eef3fc;padding:12px;border-radius:13px;font-size:14px}
+.voicebar label{display:flex;gap:9px;align-items:center}
+#cue{font-size:20px;font-weight:650;color:#264a87;text-align:center;margin:8px 0}
+</style></head><body><main class="app">
+<header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
+<div class="modes"><button id="listen" class="active">Listen & Repeat</button><button id="recall">Active Recall</button></div>
+<div class="voicebar"><label><input id="voiceMode" type="checkbox"> 🎧 Голосовой режим: русская фраза → английский ответ → следующая</label><div class="sub" style="margin-top:6px">Для запуска нажми «Начать голосовую тренировку». Держи Chrome открытым.</div><button id="voiceStart" class="primary" style="margin-top:8px;width:100%">▶ Начать голосовую тренировку</button><button id="voiceStop" class="secondary hidden" style="margin-top:8px;width:100%">■ Остановить</button></div><section class="card"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
+<div class="phrase" id="phrase"></div><div class="transcription" id="transcription"></div><p class="translation" id="translation"></p>
+<div id="details"><div class="hint" id="hint"><div class="label">Нажми на выделенный участок фразы</div><div id="hintBody" class="muted" style="font-size:14px">Здесь появятся IPA и короткое правило.</div></div>
+<div class="transcription-settings"><label for="transMode">Транскрипция</label><select id="transMode"><option value="natural">Разговорная</option><option value="clear">IPA · Clear</option><option value="both">Обе</option><option value="none">Скрыть</option></select></div><div class="audio"><button id="clear">🔊 Clear Speech</button><button id="natural">🔊 Natural Speech</button></div></div>
+<div class="activation hidden" id="activation">
+  <div class="clockline hidden" id="clockline"><div><div class="sub">ВРЕМЯ ДО НАЧАЛА РЕЧИ</div><div class="clock" id="timer">0,0 с</div></div><span id="speed" class="sub">● Отсчёт идёт</span></div>
+  <button class="mic" id="mic">🎙️ Произнести ответ</button>
+  <div class="status" id="micStatus">Слушаю… произнеси английскую фразу.</div>
+  <div id="cue" aria-live="polite"></div><div class="result" id="activationResult" aria-live="polite"></div>
+  <div class="stats hidden" id="activationStats"></div>
+</div>
+<button class="primary hidden" style="width:100%;margin-top:12px" id="reveal">Показать ответ</button>
+<div class="actions"><button class="secondary" id="prev">← Назад</button><button class="secondary" id="next">Далее →</button></div>
+<div class="small"><label><input type="checkbox" id="showMarks" checked> Показывать подсветку произношения</label></div>
+</section><footer>Listen & Repeat: прослушивания +1. Activation: время и история правильных ответов сохраняются в браузере.</footer></main>
 <script>
-const SEED=[{"id": "seed0", "ru": "Дай мне подумать об этом.", "en": "Let me think about it."}, {"id": "seed1", "ru": "Что ты делаешь?", "en": "What are you doing?"}, {"id": "seed2", "ru": "Я не это имела в виду.", "en": "I didn't mean it that way."}, {"id": "seed3", "ru": "Ты мог бы мне помочь?", "en": "Could you help me?"}, {"id": "seed4", "ru": "Я хочу попробовать ещё раз.", "en": "I want to try again."}, {"id": "seed5", "ru": "Покончить с этим.", "en": "Get it over with."}, {"id": "seed6", "ru": "Дай мне минуту.", "en": "Give me a minute."}, {"id": "seed7", "ru": "Мне нужно идти.", "en": "I have to go."}, {"id": "seed8", "ru": "Дай мне знать.", "en": "Let me know."}, {"id": "seed9", "ru": "Лучше поздно, чем никогда.", "en": "Better late than never."}];
-const KEY='speakflow-v23';
-const T={
-ru:{home:'Мои языки',train:'Тренировка',add:'Добавить',stats:'Статистика',welcome:'Выбери язык',ready:'К повторению',all:'Все фразы',hard:'Повторить сложные',hear:'Слушать',answer:'Ответить',show:'Показать ответ',again:'Ещё повторить',good:'Знаю',prev:'Назад',next:'Далее',addTitle:'Добавить сразу несколько фраз',lang:'Изучаемый язык',source:'Язык исходных фраз',phrases:'Фразы — по одной на строку',dictate:'Надиктовать',translate:'Предложить перевод',save:'Сохранить все',statsTitle:'Мой прогресс',settings:'Настройки',ui:'Язык интерфейса',export:'Сохранить копию',import:'Восстановить копию',storage:'Данные хранятся в этом браузере. Для переноса на другой телефон используй резервную копию.',empty:'Пока нет фраз. Добавь свои!',correct:'Распознано',hint:'Оцени ответ: «Знаю» или «Ещё повторить».',done:'На сегодня всё! Можно повторить сложные или добавить фразы.',due:'Сегодня',learned:'Освоено',total:'Всего',failed:'Сложно',translationFail:'Не удалось получить перевод. Проверь интернет или впиши перевод вручную.',translationInfo:'Переводы предлагает внешний онлайн-сервис MyMemory. Проверь их перед сохранением. Голосовые функции зависят от браузера.',saved:'Фразы сохранены.',confirm:'Импортировать резервную копию? Текущий прогресс будет заменён.'},
-en:{home:'My languages',train:'Practice',add:'Add phrases',stats:'Statistics',welcome:'Choose a language',ready:'Due for review',all:'All phrases',hard:'Review difficult',hear:'Listen',answer:'Speak',show:'Show answer',again:'Repeat soon',good:'I know it',prev:'Previous',next:'Next',addTitle:'Add several phrases',lang:'Learning language',source:'Input language',phrases:'One phrase per line',dictate:'Dictate',translate:'Suggest translations',save:'Save all',statsTitle:'My progress',settings:'Settings',ui:'Interface language',export:'Export backup',import:'Import backup',storage:'Progress is stored in this browser. Export a backup to move devices.',empty:'No phrases yet. Add some!',correct:'Recognized',hint:'Rate your answer.',done:'All done for today! Review difficult phrases or add new ones.',due:'Due today',learned:'Mastered',total:'Total',failed:'Difficult',translationFail:'Translation unavailable. Check internet or enter it manually.',translationInfo:'Translations use the external MyMemory service. Review before saving. Speech depends on your browser.',saved:'Phrases saved.',confirm:'Import backup? Existing progress will be replaced.'},
-fr:{home:'Mes langues',train:'Exercice',add:'Ajouter',stats:'Statistiques',welcome:'Choisissez une langue',ready:'À réviser',all:'Toutes les phrases',hard:'Phrases difficiles',hear:'Écouter',answer:'Parler',show:'Voir la réponse',again:'À revoir',good:'Je connais',prev:'Précédent',next:'Suivant',addTitle:'Ajouter plusieurs phrases',lang:'Langue étudiée',source:'Langue de départ',phrases:'Une phrase par ligne',dictate:'Dicter',translate:'Proposer des traductions',save:'Tout enregistrer',statsTitle:'Mes progrès',settings:'Paramètres',ui:"Langue de l’interface",export:'Exporter',import:'Importer',storage:'Les données restent dans ce navigateur. Exportez une sauvegarde pour changer d’appareil.',empty:'Aucune phrase. Ajoutez-en !',correct:'Reconnu',hint:'Évaluez votre réponse.',done:'Terminé pour aujourd’hui !',due:"Aujourd’hui",learned:'Maîtrisées',total:'Total',failed:'Difficiles',translationFail:'Traduction indisponible. Vérifiez Internet ou saisissez-la.',translationInfo:'Traduction via le service externe MyMemory. Vérifiez avant de sauvegarder.',saved:'Phrases enregistrées.',confirm:'Importer ? Les données actuelles seront remplacées.'}};
-const $=id=>document.getElementById(id);const now=()=>Date.now();
-let db;try{db=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
-if(!db||!Array.isArray(db.cards))db={ui:'ru',target:'en',cards:SEED.map(c=>({...c,lang:'en',level:0,due:0,tries:0,miss:0,seconds:[],hints:0}))};
-try{const old=JSON.parse(localStorage.getItem('speakflow-activation-history-v1')||'{}');db.cards.forEach(c=>{if(c.lang==='en'&&old[c.en]&&c.tries===undefined){let attempts=old[c.en];c.tries=attempts.length;c.miss=attempts.filter(a=>!a.correct).length;c.seconds=attempts.filter(a=>a.correct).map(a=>a.seconds)}})}catch(e){}
-db.cards.forEach(c=>{c.level??=0;c.due??=0;c.tries??=0;c.miss??=0;c.seconds??=[]});
-function save(){localStorage.setItem(KEY,JSON.stringify(db))}
-function t(k){return (T[db.ui]||T.ru)[k]||k}
-let screen='home',queue=[],pos=0,started=0,revealed=false,recognized='',drafts=[];
-function show(s){screen=s;['home','train','add','stats','settings'].forEach(id=>$(id).classList.toggle('hidden',id!==s));['home','train','add','stats'].forEach(id=>$('tab-'+id).classList.toggle('active',id===s));if(s==='train')renderTrain();if(s==='stats')renderStats();if(s==='home')renderHome()}
-function setUI(lang){db.ui=lang;save();renderUI();show(screen)}
-function renderUI(){document.documentElement.lang=db.ui;$('uiLang').value=db.ui;let ids={home:'tab-home',train:'tab-train',add:'tab-add',stats:'tab-stats',welcome:'homeTitle',hear:'hearPrompt',answer:'answerBtn',show:'revealBtn',again:'againBtn',good:'goodBtn',prev:'prevBtn',next:'nextBtn',addTitle:'addTitle',lang:'langLabel',source:'sourceLabel',phrases:'phrasesLabel',dictate:'dictateBtn',translate:'translateBtn',save:'saveAll',statsTitle:'statsTitle',settings:'settingsTitle',ui:'uiLabel',export:'exportBtn',import:'importBtn',storage:'storageNote'};Object.entries(ids).forEach(([k,id])=>$(id).textContent=t(k));$('mode').options[0].text=t('ready');$('mode').options[1].text=t('hard');$('mode').options[2].text=t('all');$('speechNote').textContent=t('hint');$('translateStatus').textContent=t('translationInfo');$('subtitle').textContent='Speech · Spaced repetition';renderHome()}
-function choose(lang){db.target=lang;save();$('target').value=lang;$('addTarget').value=lang;$('statLang').value=lang;restart();show('train')}
-function renderHome(){['en','fr'].forEach(l=>{$(l+'Count').textContent=db.cards.filter(c=>c.lang===l).length+' '+t('total').toLowerCase()});$('homeInfo').textContent=t('storage')}
-function candidates(){let a=db.cards.filter(c=>c.lang===db.target);let m=$('mode').value;if(m==='due')a=a.filter(c=>c.due<=now());if(m==='hard')a=a.filter(c=>c.miss>0||c.level<2);return a.sort((x,y)=>(x.due-y.due)||((y.miss||0)-(x.miss||0)))}
-function restart(){queue=candidates();pos=0;started=now();revealed=false;recognized='';renderTrain()}
-function current(){return queue[pos]}
-function renderTrain(){if(screen!=='train')return;$('target').value=db.target;$('queueInfo').textContent=queue.length?`${Math.min(pos+1,queue.length)} / ${queue.length}`:'';let c=current();$('prompt').textContent=c?(c.ru||c.en||c.fr):t('done');$('solution').textContent=c?(c[db.target]||''):'';$('solution').classList.toggle('hidden',!revealed);$('feedback').textContent=recognized;$('revealBtn').disabled=!c;$('againBtn').disabled=!c;$('goodBtn').disabled=!c}
-function next(){if(screen!=='train'){show('train');return}if(pos<queue.length)pos++;started=now();revealed=false;recognized='';renderTrain()}
-function previous(){if(screen!=='train'){show('home');return}pos=Math.max(0,pos-1);started=now();revealed=false;recognized='';renderTrain()}
-function reveal(){revealed=true;renderTrain()}
-function say(text,lang){if(!('speechSynthesis'in window))return;speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(text);u.lang=({ru:'ru-RU',en:'en-US',fr:'fr-FR',ar:'ar-SA',fa:'fa-IR'})[lang]||lang;u.rate=.9;speechSynthesis.speak(u)}
-function speakPrompt(){let c=current();if(c)say(c.ru||c.en,'ru')}
-function recognizer(lang,callback){let R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R){alert('Speech recognition is not supported in this browser.');return}let r=new R();r.lang=({ru:'ru-RU',en:'en-US',fr:'fr-FR',ar:'ar-SA',fa:'fa-IR'})[lang]||lang;r.onresult=e=>callback(e.results[0][0].transcript);r.onerror=e=>{$('feedback').textContent=e.error};try{r.start()}catch(e){alert(e.message)}}
-function listen(){if(!current())return;recognizer(db.target,txt=>{recognized=t('correct')+': '+txt;revealed=true;renderTrain()})}
-function rate(ok){let c=current();if(!c)return;c.tries++;if(ok){c.level=Math.min(6,c.level+1);let days=[0,1,3,7,14,30,60][c.level];c.due=now()+days*86400000;c.seconds.push(Math.round((now()-started)/100)/10)}else{c.level=0;c.miss++;c.due=now()+10*60000}save();next()}
-function renderStats(){let l=$('statLang').value,a=db.cards.filter(c=>c.lang===l),due=a.filter(c=>c.due<=now()).length,master=a.filter(c=>c.level>=5).length,hard=a.filter(c=>c.miss>0).length;$('statsGrid').innerHTML=[[t('total'),a.length],[t('due'),due],[t('learned'),master]].map(([x,y])=>`<div class="stat"><strong>${y}</strong>${x}</div>`).join('');$('statsList').replaceChildren();a.sort((x,y)=>x.level-y.level).forEach(c=>{let d=document.createElement('div');d.className='item';let title=document.createElement('strong');title.textContent=c[l]||'';let sub=document.createElement('div');sub.className='status';sub.textContent=`${c.ru||''} · ${t('failed')}: ${c.miss} · ${t('learned')}: ${c.level}/6`;d.append(title,sub);$('statsList').append(d)})}
-function dictate(){let lang=$('sourceLang').value;recognizer(lang,txt=>{$('batch').value+=($('batch').value.trim()?'\n':'')+txt})}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function translateOne(q,from,to){if(from===to)return q;let u='https://api.mymemory.translated.net/get?q='+encodeURIComponent(q)+'&langpair='+encodeURIComponent(from+'|'+to);let r=await fetch(u);if(!r.ok)throw Error('HTTP '+r.status);let j=await r.json();if(j.responseStatus!==200||!j.responseData?.translatedText)throw Error('Translation unavailable');return j.responseData.translatedText}
-async function translateBatch(){let lines=$('batch').value.split(/\n/).map(s=>s.trim()).filter(Boolean).slice(0,30),from=$('sourceLang').value,to=$('addTarget').value;drafts=[];$('translateStatus').textContent='…';for(let i=0;i<lines.length;i++){let input=lines[i],out='';try{out=await translateOne(input,from,to)}catch(e){}let ru=from==='ru'?input:'',target=from===to?input:out;try{if(!ru)ru=await translateOne(input,from,'ru')}catch(e){}drafts.push({ru,target,lang:to});$('translateStatus').textContent=(i+1)+' / '+lines.length}renderDrafts();$('translateStatus').textContent=t('translationInfo')}
-function renderDrafts(){$('drafts').replaceChildren();drafts.forEach((d,i)=>{let box=document.createElement('div');box.className='item';let a=document.createElement('input');a.value=d.ru;a.placeholder='Русский';a.oninput=()=>d.ru=a.value;let b=document.createElement('input');b.value=d.target;b.placeholder=d.lang==='en'?'English':'Français';b.oninput=()=>d.target=b.value;box.append(a,b);$('drafts').append(box)});$('saveAll').classList.toggle('hidden',!drafts.length)}
-function saveDrafts(){let valid=drafts.filter(x=>x.ru.trim()&&x.target.trim());valid.forEach(d=>db.cards.push({id:'custom-'+now()+'-'+Math.random().toString(36).slice(2),ru:d.ru.trim(),[d.lang]:d.target.trim(),lang:d.lang,level:0,due:0,tries:0,miss:0,seconds:[]}));save();drafts=[];renderDrafts();$('batch').value='';$('translateStatus').textContent=t('saved')+' '+valid.length;restart();renderHome()}
-function backup(){let blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='SpeakFlow-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function restore(e){let f=e.target.files[0];if(!f)return;f.text().then(s=>{let d=JSON.parse(s);if(!Array.isArray(d.cards))throw Error('Invalid backup');if(confirm(t('confirm'))){db=d;save();renderUI();restart();show('home')}}).catch(err=>alert(err.message));e.target.value=''}
-$('sourceLang').value='ru';$('target').value=db.target;$('addTarget').value=db.target;$('statLang').value=db.target;renderUI();restart();show('home');
+const cards=[
+{en:"Let me think about it.",ru:"Дай мне подумать об этом.",natural:"Lemme think about it.",parts:[{text:"Let me",ipa:"[ˈlɛmi]",rule:"Reduction",desc:"В беглой речи let me часто звучит как lemme: сочетание /t m/ упрощается."},{text:"about it",ipa:"[əˈbaʊɾɪt]",rule:"Flap T",desc:"На стыке about it звук /t/ перед безударным гласным часто реализуется как быстрый [ɾ], похожий на краткое «д»."}]},
+{en:"What are you doing?",ru:"Что ты делаешь?",natural:"Whaddaya doing?",parts:[{text:"What are you",ipa:"[ˈwʌɾəjə]",rule:"Reduction / Flap T",desc:"В быстрой разговорной речи возможна форма whaddaya; точное звучание зависит от говорящего."}]},
+{en:"I didn't mean it that way.",ru:"Я не это имела в виду.",natural:"I didn't mean it that way.",parts:[]},
+{en:"Could you help me?",ru:"Ты мог бы мне помочь?",natural:"Couldja help me?",parts:[{text:"Could you",ipa:"[ˈkʊdʒə]",rule:"Assimilation",desc:"На стыке слов /d/ и /j/ могут сливаться в [dʒ], а you ослабляется до [jə]."}]},
+{en:"I want to try again.",ru:"Я хочу попробовать ещё раз.",natural:"I wanna try again.",parts:[{text:"want to",ipa:"[ˈwɑnə]",rule:"Reduction",desc:"В непринуждённой речи want to часто сокращается до wanna."}]},
+{en:"Get it over with.",ru:"Покончить с этим.",natural:"Get it over with.",parts:[{text:"Get it",ipa:"[ˈɡɛɾɪt]",rule:"Flap T",desc:"Между гласными /t/ в get может звучать как [ɾ]."}]},
+{en:"Give me a minute.",ru:"Дай мне минуту.",natural:"Gimme a minute.",parts:[{text:"Give me",ipa:"[ˈɡɪmi]",rule:"Reduction",desc:"Give me часто сокращается до gimme."}]},
+{en:"I have to go.",ru:"Мне нужно идти.",natural:"I hafta go.",parts:[{text:"have to",ipa:"[ˈhæftə]",rule:"Reduction",desc:"В have to звук /v/ часто оглушается до [f], а to ослабляется."}]},
+{en:"Let me know.",ru:"Дай мне знать.",natural:"Lemme know.",parts:[{text:"Let me",ipa:"[ˈlɛmi]",rule:"Reduction",desc:"Let me может произноситься как lemme."}]},
+{en:"Better late than never.",ru:"Лучше поздно, чем никогда.",natural:"Better late than never.",parts:[{text:"Better",ipa:"[ˈbɛɾɚ]",rule:"Flap T",desc:"В американском английском /t/ между ударным и безударным гласными часто становится [ɾ]."}]}
+];
+// IPA transcription for General American. Natural variants are representative, not universal.
+const transcriptions=[
+{clear:"/lɛt mi θɪŋk əˈbaʊt ɪt/",natural:"[ˈlɛmi θɪŋk əˈbaʊɾɪt]"},
+{clear:"/wʌt ɑɹ ju ˈduɪŋ/",natural:"[ˈwʌɾəjə ˈduɪŋ]"},
+{clear:"/aɪ ˈdɪdənt min ɪt ðæt weɪ/",natural:"[aɪ ˈdɪɾn̩ min ɪt ðæt weɪ]"},
+{clear:"/kʊd ju hɛlp mi/",natural:"[ˈkʊdʒə hɛlp mi]"},
+{clear:"/aɪ wɑnt tu tɹaɪ əˈɡɛn/",natural:"[aɪ ˈwɑnə tɹaɪ əˈɡɛn]"},
+{clear:"/ɡɛt ɪt ˈoʊvɚ wɪð/",natural:"[ɡɛɾɪɾˈoʊvɚ wɪð]"},
+{clear:"/ɡɪv mi ə ˈmɪnɪt/",natural:"[ˈɡɪmi ə ˈmɪnɪt]"},
+{clear:"/aɪ hæv tu ɡoʊ/",natural:"[aɪ ˈhæftə ɡoʊ]"},
+{clear:"/lɛt mi noʊ/",natural:"[ˈlɛmi noʊ]"},
+{clear:"/ˈbɛtɚ leɪt ðæn ˈnɛvɚ/",natural:"[ˈbɛɾɚ leɪt ðən ˈnɛvɚ]"}
+];
+const $=id=>document.getElementById(id);
+let index=0,mode="listen",revealed=false,selected=-1;
+let startAt=performance.now(), elapsed=0, finished=false, recognizer=null, listening=false, lastAnswer="", feedback="", speechStartedAt=null, micMessage="";
+let voiceActive=false,voiceToken=0,cueTimer=null,voiceAdvanceTimer=null,hintCount=0,attemptedSpeech=false;
+function cancelCue(){clearTimeout(cueTimer);cueTimer=null}
+function cueDelay(){const a=(history[cards[index].en]||[]).slice(-8);const good=a.filter(x=>x.correct&&(!x.hints));if(good.length>=3)return 12000;if(a.length>=3&&good.length===0)return 7000;return 10000}
+function startCues(){cancelCue();hintCount=0;$("cue").textContent="";function tick(){if(mode!=="recall"||finished||attemptedSpeech)return;const words=cards[index].en.split(/\\s+/);if(hintCount<words.length){hintCount++;const hint=words.slice(0,hintCount).join(" ")+" …";$("cue").textContent=hint;if(voiceActive)voiceSay(hint,"en-US",()=>{});cueTimer=setTimeout(tick,5000)}}cueTimer=setTimeout(tick,cueDelay())}
+function voiceSay(message,lang,onDone){if(!("speechSynthesis" in window)){onDone?.();return}speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(message);u.lang=lang;u.rate=lang==="ru-RU"?0.95:0.9;u.onend=()=>onDone?.();u.onerror=()=>onDone?.();speechSynthesis.speak(u)}
+function voicePrompt(){if(!voiceActive||mode!=="recall")return;const token=++voiceToken;stopRecognition();cancelCue();resetActivation();render();$("micStatus").textContent="Слушай русскую фразу…";voiceSay(cards[index].ru,"ru-RU",()=>{if(!voiceActive||token!==voiceToken)return;startAt=performance.now();startCues();startMic()})}
+function stopVoice(){voiceActive=false;voiceToken++;clearTimeout(voiceAdvanceTimer);cancelCue();if("speechSynthesis" in window)speechSynthesis.cancel();stopRecognition();$("voiceStop").classList.add("hidden");$("voiceStart").classList.remove("hidden")}
+$("voiceStart").onclick=()=>{if(!$("voiceMode").checked)$("voiceMode").checked=true;voiceActive=true;$("voiceStart").classList.add("hidden");$("voiceStop").classList.remove("hidden");mode="recall";voicePrompt()};
+$("voiceStop").onclick=()=>{stopVoice();render()};
+$("voiceMode").onchange=()=>{if(!$("voiceMode").checked)stopVoice()};
+let history={};try{history=JSON.parse(localStorage.getItem("speakflow-activation-history-v1")||"{}")}catch(e){}
+function saveHistory(){try{localStorage.setItem("speakflow-activation-history-v1",JSON.stringify(history))}catch(e){}}
+function clockSeconds(){return finished?elapsed:(performance.now()-startAt)/1000}
+function formatSec(x){return x.toFixed(1).replace(".",",")+" с"}
+function speedClass(t){return t<=3?"green":t<=7?"amber":"red"}
+function speedLabel(t){return t<=3?"● Быстро":t<=7?"● Средне":"● Пока медленно"}
+function resetActivation(){cancelCue();attemptedSpeech=false;stopRecognition();startAt=performance.now();elapsed=0;finished=false;lastAnswer="";feedback="";revealed=false;speechStartedAt=null;micMessage=""}
+function stopRecognition(){if(recognizer){const r=recognizer;recognizer=null;try{r.abort()}catch(e){}}listening=false}
+function normalized(s){return s.toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z'\s]/g," ").replace(/\s+/g," ").trim()}
+function statsRender(){const data=history[cards[index].en]||[];const successes=data.filter(x=>x.correct);const box=$("activationStats");box.replaceChildren();
+const title=document.createElement("div");title.textContent="История этой фразы · "+successes.length+" правильных ответов";box.append(title);
+if(successes.length){const prev=successes.at(-2),last=successes.at(-1);const info=document.createElement("div");
+info.textContent="Последний: "+formatSec(last.seconds)+(prev?" · предыдущий: "+formatSec(prev.seconds)+" · "+(prev.seconds>last.seconds?"быстрее на ":"медленнее на ")+formatSec(Math.abs(prev.seconds-last.seconds)):"");box.append(info);
+const bars=document.createElement("div");bars.className="history";const recent=successes.slice(-8),max=Math.max(...recent.map(x=>x.seconds),1);
+recent.forEach(x=>{const b=document.createElement("div");b.className="bar";b.style.height=Math.max(8,Math.round(x.seconds/max*55))+"px";b.title=formatSec(x.seconds);bars.append(b)});box.append(bars)}
+else{const p=document.createElement("div");p.className="muted";p.textContent="Пока нет правильных ответов.";box.append(p)}
+}
+function updateClock(){if(mode!=="recall")return;$("timer").textContent=formatSec(clockSeconds());const t=clockSeconds();$("speed").textContent=finished?"● "+(t<=3?"Быстро":t<=7?"Средне":"Медленно"):speedLabel(t);$("speed").className="sub "+speedClass(t)}
+function recordAnswer(text){if(mode!=="recall"||finished)return;attemptedSpeech=true;cancelCue();const correct=normalized(text)===normalized(cards[index].en);lastAnswer=text;
+if(correct){elapsed=speechStartedAt===null?clockSeconds():Math.max(0,(speechStartedAt-startAt)/1000);finished=true;stopRecognition();const key=cards[index].en;const old=(history[key]||[]).filter(x=>x.correct).at(-1);(history[key]??=[]).push({correct:true,seconds:Math.round(elapsed*10)/10,date:new Date().toISOString(),recognized:text,hints:hintCount});saveHistory();
+feedback="✓ Правильно! "+formatSec(elapsed)+(old?" · "+(elapsed<old.seconds?"Быстрее":"Медленнее")+" на "+formatSec(Math.abs(old.seconds-elapsed)):"");revealed=true;render();if(voiceActive){const token=voiceToken;voiceSay("Верно","ru-RU",()=>{if(voiceActive&&token===voiceToken)move(1)})}}
+else{(history[cards[index].en]??=[]).push({correct:false,seconds:Math.round(clockSeconds()*10)/10,date:new Date().toISOString(),recognized:text,hints:hintCount});saveHistory();feedback="Распознано: «"+text+"». Не совпало — попробуй ещё раз.";speechStartedAt=null;render();if(voiceActive){voiceSay("Попробуй ещё раз","ru-RU",()=>{if(voiceActive){attemptedSpeech=false;startCues();startMic()}})}}}
+function startMic(){if(mode!=="recall"||finished)return;const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!R){micMessage="В этом браузере нет поддержки распознавания речи." ;$("micStatus").textContent="Распознавание речи недоступно в этом браузере. Попробуй Chrome через HTTPS.";return}
+if(!window.isSecureContext){micMessage="Файл открыт без защищённого HTTPS-адреса. Открой SpeakFlow на HTTPS-сайте.";$("micStatus").textContent=micMessage;return}
+stopRecognition();micMessage="";const r=new R();recognizer=r;r.lang="en-US";r.interimResults=false;r.maxAlternatives=1;r.continuous=false;listening=true;
+$("micStatus").textContent="Слушаю… произнеси английскую фразу.";$("mic").textContent="🎙️ Слушаю…";
+r.onspeechstart=()=>{cancelCue();if(recognizer===r&&speechStartedAt===null)speechStartedAt=performance.now()};
+r.onresult=e=>{if(recognizer!==r)return;const heard=e.results[0][0].transcript;listening=false;recognizer=null;recordAnswer(heard)};
+r.onerror=e=>{if(recognizer!==r)return;recognizer=null;listening=false;micMessage=e.error==="not-allowed"?"Доступ к микрофону запрещён. Разреши его для этого сайта в Chrome.":e.error==="no-speech"?"Речь не обнаружена. Проверь микрофон и попробуй ещё раз.":e.error==="network"?"Ошибка сети при распознавании. Проверь интернет и попробуй снова.":"Ошибка микрофона: "+e.error;$("micStatus").textContent=micMessage;$("mic").textContent="🎙️ Произнести ответ"};
+r.onend=()=>{if(recognizer!==r)return;recognizer=null;listening=false;$("mic").textContent="🎙️ Произнести ответ";if(!finished){$("micStatus").textContent="Нажми на микрофон, чтобы попробовать снова.";if(voiceActive&&!micMessage){startMic()}}};
+try{r.start()}catch(e){recognizer=null;listening=false;$("micStatus").textContent="Не удалось включить микрофон: "+e.message}}
+
+
+let transMode="natural";try{const saved=localStorage.getItem("speakflow-transcription-mode");if(["natural","clear","both","none"].includes(saved))transMode=saved}catch(e){}
+$("transMode").value=transMode;
+$("transMode").onchange=()=>{transMode=$("transMode").value;try{localStorage.setItem("speakflow-transcription-mode",transMode)}catch(e){}render()};
+let counts={};try{counts=JSON.parse(localStorage.getItem("speakflow-repeats-v1")||"{}")}catch(e){}
+function persist(){try{localStorage.setItem("speakflow-repeats-v1",JSON.stringify(counts))}catch(e){}}
+function render(){const c=cards[index];$("index").textContent=`${index+1} / ${cards.length}`;$("count").textContent=counts[c.en]||0;
+$("listen").classList.toggle("active",mode==="listen");$("recall").classList.toggle("active",mode==="recall");
+$("modeLabel").textContent=mode==="listen"?"Listen & Repeat":"Active Recall";
+const visible=mode==="listen"||revealed;
+$("activation").classList.toggle("hidden",mode!=="recall");
+if(mode==="recall"){$("mic").disabled=finished;$("mic").textContent=finished?"✓ Ответ принят":listening?"🎙️ Слушаю…":"🎙️ Произнести ответ";
+$("micStatus").textContent=finished?"Попытка завершена. Перейди к следующей фразе.":listening?"Слушаю… произнеси английскую фразу.":(micMessage||"Слушаю тебя…");
+$("activationResult").textContent=feedback;$("clockline").classList.toggle("hidden",!finished||!revealed);$("activationStats").classList.toggle("hidden",!finished||!revealed);if(finished&&revealed){statsRender();updateClock()}}
+$("phrase").replaceChildren();
+if(visible){let pos=0;const parts=$("showMarks").checked?c.parts:[];for(const [i,part] of parts.entries()){const at=c.en.indexOf(part.text,pos);if(at<0)continue;$("phrase").append(document.createTextNode(c.en.slice(pos,at)));const b=document.createElement("button");b.className="mark"+(selected===i?" selected":"");b.textContent=part.text;b.onclick=()=>{selected=selected===i?-1:i;render()};$("phrase").append(b);pos=at+part.text.length}$("phrase").append(document.createTextNode(c.en.slice(pos)))}
+else $("phrase").textContent=c.ru;
+const t=$("transcription");t.replaceChildren();t.classList.toggle("hidden",!visible||transMode==="none");
+if(visible){const tr=transcriptions[index];for(const [type,label,value] of [["clear","Clear",tr.clear],["natural","Natural",tr.natural]]){if(transMode!=="both"&&transMode!==type)continue;const line=document.createElement("div");if(transMode==="both"){const tag=document.createElement("span");tag.className="tag";tag.textContent=label+":";line.append(tag)}line.append(document.createTextNode(value));t.append(line)}}
+$("translation").textContent=visible?c.ru:"Вспомни и произнеси английскую фразу.";
+$("details").classList.toggle("hidden",!visible);$("reveal").classList.toggle("hidden",visible);
+const h=$("hint");h.classList.toggle("hidden",!$("showMarks").checked||!c.parts.length||selected<0);
+if(selected>=0&&c.parts[selected]&&$("showMarks").checked){const x=c.parts[selected];$("hintBody").replaceChildren();const name=document.createElement("strong");name.textContent=x.text+" · "+x.rule;const ipa=document.createElement("div");ipa.className="ipa";ipa.textContent=x.ipa;const p=document.createElement("p");p.textContent=x.desc;$("hintBody").append(name,ipa,p)}else $("hintBody").textContent="Нажми на выделенный участок, чтобы увидеть IPA и правило.";
+}
+function speak(natural){if(!("speechSynthesis" in window)){alert("Озвучивание не поддерживается этим браузером.");return}const key=cards[index].en;counts[key]=(counts[key]||0)+1;persist();$("count").textContent=counts[key];speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(natural?cards[index].natural:cards[index].en);u.lang="en-US";u.rate=natural?1.03:0.78;const voices=speechSynthesis.getVoices();u.voice=voices.find(v=>v.lang.replace("_","-").toLowerCase()==="en-us")||null;speechSynthesis.speak(u)}
+$("clear").onclick=()=>speak(false);$("natural").onclick=()=>speak(true);
+$("listen").onclick=()=>{stopVoice();mode="listen";revealed=false;selected=-1;render()};
+$("recall").onclick=()=>{mode="recall";selected=-1;resetActivation();render();startCues();startMic()};
+$("reveal").onclick=()=>{cancelCue();if(mode==="recall"&&!finished){elapsed=clockSeconds();finished=true;stopRecognition();feedback="Ответ открыт без проверки. Время не засчитано."; }revealed=true;render()};
+$("mic").onclick=()=>{speechStartedAt=null;attemptedSpeech=false;startCues();startMic()};
+
+function move(delta){cancelCue();stopRecognition();index=(index+delta+cards.length)%cards.length;revealed=false;selected=-1;if(mode==="recall")resetActivation();if("speechSynthesis" in window)speechSynthesis.cancel();render();if(mode==="recall"){if(voiceActive)voicePrompt();else{startCues();startMic()}}}
+$("prev").onclick=()=>move(-1);$("next").onclick=()=>move(1);try{$("showMarks").checked=localStorage.getItem("speakflow-show-marks")!=="false"}catch(e){}
+$("showMarks").onchange=()=>{try{localStorage.setItem("speakflow-show-marks",String($("showMarks").checked))}catch(e){}selected=-1;render()};render();
 </script></body></html>
