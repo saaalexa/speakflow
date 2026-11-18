@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SpeakFlow 2.0.1</title><style>
+<title>SpeakFlow 2.0.3</title><style>
 :root{font-family:system-ui,-apple-system,Arial,sans-serif;color:#202634;background:#f5f7fb}
 *{box-sizing:border-box}body{margin:0;padding:18px}.app{max-width:520px;margin:0 auto}
 header,.top,.actions,.modes{display:flex;align-items:center;justify-content:space-between;gap:10px}
@@ -42,19 +42,19 @@ body{padding-bottom:112px}
 .add-panel label{display:block;font-size:13px;color:#53617a;margin:12px 0 6px}
 .add-panel .tools{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.add-panel .tools button{flex:1;background:#e8edf6;color:#243e70;font-size:13px}
 .add-panel .tools .primary{background:#264a87;color:white}.add-panel .status{font-size:13px;color:#53617a;margin-top:10px}
-.add-panel .saved-item{padding:10px 0;border-bottom:1px solid #e3e8f1}.add-panel .saved-item button{padding:6px 10px;margin-top:6px}
+.add-panel .tools button.listening-now{background:#264a87;color:white;box-shadow:0 0 0 3px #b9ccec}.add-panel .saved-item{padding:10px 0;border-bottom:1px solid #e3e8f1}.add-panel .saved-item button{padding:6px 10px;margin-top:6px}
 </style></head><body><main class="app">
-<header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0.1</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
+<header><div><h1>SpeakFlow <span style="font-size:13px;color:#7c8594">2.0.3</span></h1><div class="sub">American English · Speech practice</div></div><span class="sub" id="index"></span></header>
 <div class="modes"><button id="listen" class="active">Listen & Repeat</button><button id="recall">Active Recall</button><button id="addCards">+ Cards</button></div>
 <div class="voicebar" id="voiceBar"><label><input id="voiceMode" type="checkbox"> 🎧 Голосовой режим: русская фраза → английский ответ → следующая</label><div class="sub" style="margin-top:6px">Для запуска нажми «Начать голосовую тренировку». Держи Chrome открытым.</div><button id="voiceStart" class="primary" style="margin-top:8px;width:100%">▶ Начать голосовую тренировку</button><button id="voiceStop" class="secondary hidden" style="margin-top:8px;width:100%">■ Остановить</button></div><section class="card add-panel hidden" id="addPanel">
 <h2 style="margin:0;font-size:20px">Мои карточки</h2>
-<p class="sub">Продиктуй фразу на русском или английском, проверь перевод и сохрани.</p>
+<p class="sub">Нажми 🎙️ English или 🎙️ Русский, произнеси фразу, проверь перевод и сохрани. Можно исправлять оба текста.</p>
 <label for="cardEn">English</label><textarea id="cardEn" placeholder="English phrase"></textarea>
 <div class="tools"><button id="dictEn">🎙️ English</button><button id="playEn">🔊 Прослушать</button></div>
 <label for="cardRu">Русский</label><textarea id="cardRu" placeholder="Русский перевод"></textarea>
 <div class="tools"><button id="dictRu">🎙️ Русский</button><button id="translateCard">⇄ Предложить перевод</button></div>
 <div class="tools"><button id="saveCard" class="primary">Сохранить карточку</button><button id="clearCard">Новая</button></div>
-<div class="status" id="cardStatus" aria-live="polite"></div>
+<div class="status" id="cardStatus" aria-live="polite">Для голосового ввода используй Chrome и HTTPS-адрес сайта.</div>
 <h3 style="font-size:16px;margin:20px 0 8px">Сохранённые карточки</h3><div id="savedCards"></div>
 </section><section class="card" id="practicePanel"><div class="top"><span id="modeLabel">Listen & Repeat</span><span class="count">↻ <b id="count">0</b></span></div>
 <div class="phrase" id="phrase"></div><div class="transcription" id="transcription"></div><p class="translation" id="translation"></p>
@@ -101,7 +101,7 @@ const $=id=>document.getElementById(id);
 let index=0,mode="listen",revealed=false,selected=-1;
 let customCards=[];try{const stored=JSON.parse(localStorage.getItem("speakflow-custom-cards-v1")||"[]");if(Array.isArray(stored))customCards=stored.filter(x=>x&&typeof x.en==="string"&&typeof x.ru==="string").map(x=>({...x,natural:x.natural||x.en,parts:[]}))}catch(e){}
 cards.push(...customCards);for(const c of customCards)transcriptions.push({clear:"",natural:""});
-let editingCard=-1,dictation=null;
+let editingCard=-1,dictation=null,dictationToken=0,translationToken=0;
 let startAt=performance.now(), elapsed=0, finished=false, recognizer=null, listening=false, lastAnswer="", feedback="", speechStartedAt=null, micMessage="";
 let voiceActive=false,voiceToken=0,cueTimer=null,voiceAdvanceTimer=null,hintCount=0,attemptedSpeech=false;
 function cancelCue(){clearTimeout(cueTimer);cueTimer=null}
@@ -181,8 +181,8 @@ $("clear").onclick=()=>speak(false);$("natural").onclick=()=>speak(true);
 $("addCards").onclick=()=>{stopVoice();stopRecognition();cancelCue();mode="add";render()};
 function cardStatus(msg){$("cardStatus").textContent=msg}
 function persistCustom(){localStorage.setItem("speakflow-custom-cards-v1",JSON.stringify(customCards))}
-function renderSavedCards(){const list=$("savedCards");list.replaceChildren();if(!customCards.length){list.textContent="Пока нет своих карточек.";return}customCards.forEach((c,i)=>{const item=document.createElement("div");item.className="saved-item";const content=document.createElement("div");content.textContent=c.en+" — "+c.ru;const edit=document.createElement("button");edit.textContent="Редактировать";edit.onclick=()=>{editingCard=i;$("cardEn").value=c.en;$("cardRu").value=c.ru;cardStatus("Редактирование карточки. Изменения сохранятся после подтверждения.");window.scrollTo({top:0,behavior:"smooth"})};item.append(content,edit);list.append(item)})}
-function resetCardEditor(){editingCard=-1;$("cardEn").value="";$("cardRu").value="";cardStatus("")}
+function renderSavedCards(){const list=$("savedCards");list.replaceChildren();if(!customCards.length){list.textContent="Пока нет своих карточек.";return}customCards.forEach((c,i)=>{const item=document.createElement("div");item.className="saved-item";const content=document.createElement("div");content.textContent=c.en+" — "+c.ru;const edit=document.createElement("button");edit.textContent="Редактировать";edit.onclick=()=>{stopCardDictation();translationToken++;editingCard=i;$("cardEn").value=c.en;$("cardRu").value=c.ru;cardStatus("Редактирование карточки. Изменения сохранятся после подтверждения.");window.scrollTo({top:0,behavior:"smooth"})};item.append(content,edit);list.append(item)})}
+function resetCardEditor(){stopCardDictation();translationToken++;editingCard=-1;$("cardEn").value="";$("cardRu").value="";cardStatus("")}
 $("clearCard").onclick=resetCardEditor;
 $("saveCard").onclick=()=>{const en=$("cardEn").value.trim(),ru=$("cardRu").value.trim();if(!en||!ru){cardStatus("Заполни обе фразы перед сохранением.");return}
 const duplicate=cards.findIndex((c,i)=>normalized(c.en)===normalized(en)&&i!==((editingCard<0)?-1:cards.length-customCards.length+editingCard));
@@ -190,12 +190,37 @@ if(duplicate>=0){cardStatus("Такая английская фраза уже �
 if(editingCard>=0){const old=customCards[editingCard];const oldEn=old.en;customCards[editingCard]={en,ru,natural:en,parts:[]};const idx=cards.length-customCards.length+editingCard;cards[idx]=customCards[editingCard];if(oldEn!==en&&history[oldEn]&&!history[en]){history[en]=history[oldEn];delete history[oldEn];saveHistory()}cardStatus("Изменения сохранены.")}
 else{const c={en,ru,natural:en,parts:[]};customCards.push(c);cards.push(c);transcriptions.push({clear:"",natural:""});cardStatus("Карточка сохранена и добавлена в тренировки.")}
 try{persistCustom()}catch(e){cardStatus("Не удалось сохранить в браузере: "+e.message);return}editingCard=-1;$("cardEn").value="";$("cardRu").value="";renderSavedCards()};
-function dictateCard(lang,target){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R||!window.isSecureContext){cardStatus("Для диктовки открой сайт через HTTPS в Chrome и разреши микрофон.");return}if(dictation){try{dictation.abort()}catch(e){}}const r=new R();dictation=r;r.lang=lang;r.onresult=e=>{if(dictation!==r)return;$(target).value=e.results[0][0].transcript;cardStatus("Текст распознан. Проверь и при необходимости исправь.")};r.onerror=e=>cardStatus("Ошибка распознавания: "+e.error);r.onend=()=>{if(dictation===r)dictation=null};try{r.start();cardStatus("Слушаю…")}catch(e){cardStatus("Микрофон не запустился: "+e.message)}}
+function stopCardDictation(){dictationToken++;if(dictation){const old=dictation;dictation=null;try{old.abort()}catch(e){}}for(const id of ["dictEn","dictRu"]){$(id).classList.remove("listening-now");$(id).textContent=id==="dictEn"?"🎙️ English":"🎙️ Русский"}}
+async function translateInto(from,overwrite=false){
+ const to=from==="en"?"ru":"en",source=$(from==="en"?"cardEn":"cardRu"),target=$(to==="en"?"cardEn":"cardRu");
+ const value=source.value.trim();if(!value){cardStatus("Сначала произнеси или введи фразу.");return}
+ if(target.value.trim()&&!overwrite){cardStatus("Текст распознан. Перевод уже заполнен — можешь исправить его или нажать «Предложить перевод».");return}
+ const token=++translationToken;cardStatus("Текст распознан. Получаю предложенный перевод…");
+ try{const url="https://api.mymemory.translated.net/get?q="+encodeURIComponent(value)+"&langpair="+from+"|"+to;
+ const response=await fetch(url);if(!response.ok)throw Error("Сервис недоступен");const data=await response.json();const result=data?.responseData?.translatedText;
+ if(token!==translationToken||mode!=="add")return;
+ if(!result||Number(data.responseStatus)!==200)throw Error("Перевод не получен");
+ if(!overwrite&&target.value.trim()){cardStatus("Перевод уже введён — оставила твой текст без изменений.");return}
+ target.value=result;cardStatus("Готово. Проверь обе фразы, при необходимости исправь и нажми «Сохранить карточку».")
+ }catch(e){if(token===translationToken)cardStatus("Не удалось получить автоматический перевод. Введи вторую фразу вручную или повтори попытку.")}
+}
+function dictateCard(lang,target){
+ const R=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!R){cardStatus("В этом браузере нет распознавания речи. Открой SpeakFlow в Chrome.");return}
+ if(!window.isSecureContext){cardStatus("Для микрофона открой опубликованный HTTPS-сайт SpeakFlow, не скачанный HTML-файл.");return}
+ if(dictation){stopCardDictation();return}
+ stopRecognition();const r=new R(),token=++dictationToken;dictation=r;r.lang=lang;r.interimResults=false;r.continuous=false;r.maxAlternatives=1;
+ const button=$(lang==="en-US"?"dictEn":"dictRu");button.classList.add("listening-now");button.textContent="■ Остановить";
+ r.onresult=e=>{if(dictation!==r||token!==dictationToken)return;const heard=e.results?.[0]?.[0]?.transcript;if(!heard)return;$(target).value=heard;const from=lang==="en-US"?"en":"ru";cardStatus("Распознано: «"+heard+"». Можно исправить текст.");if(!$(from==="en"?"cardRu":"cardEn").value.trim())translateInto(from)};
+ r.onerror=e=>{if(dictation!==r)return;cardStatus(e.error==="not-allowed"?"Доступ к микрофону запрещён. Разреши микрофон для сайта в Chrome.":e.error==="no-speech"?"Речь не обнаружена. Нажми микрофон и попробуй ещё раз.":"Ошибка распознавания: "+e.error)};
+ r.onend=()=>{if(dictation===r){dictation=null;button.classList.remove("listening-now");button.textContent=lang==="en-US"?"🎙️ English":"🎙️ Русский"}};
+ try{r.start();cardStatus("🎙️ Слушаю "+(lang==="en-US"?"английскую":"русскую")+" фразу… Говори сейчас.")}catch(e){stopCardDictation();cardStatus("Микрофон не запустился: "+e.message)}
+}
 $("dictEn").onclick=()=>dictateCard("en-US","cardEn");$("dictRu").onclick=()=>dictateCard("ru-RU","cardRu");
 $("playEn").onclick=()=>{const value=$("cardEn").value.trim();if(!value)return cardStatus("Сначала введи английскую фразу.");voiceSay(value,"en-US",()=>{})};
-$("translateCard").onclick=async()=>{const en=$("cardEn").value.trim(),ru=$("cardRu").value.trim();if(!en&&!ru)return cardStatus("Сначала продиктуй или введи фразу.");const from=en?"en":"ru",to=en?"ru":"en",value=en||ru;cardStatus("Запрашиваю перевод…");try{const url="https://api.mymemory.translated.net/get?q="+encodeURIComponent(value)+"&langpair="+from+"|"+to;const response=await fetch(url);if(!response.ok)throw Error("Сервис недоступен");const data=await response.json();const result=data?.responseData?.translatedText;if(!result||data.responseStatus!==200)throw Error("Перевод не получен");$(to==="en"?"cardEn":"cardRu").value=result;cardStatus("Предложенный машинный перевод. Проверь и отредактируй перед сохранением.")}catch(e){cardStatus("Не удалось получить перевод. Введи его вручную; интернет и внешний сервис перевода могут быть недоступны.")}};
-$("listen").onclick=()=>{stopVoice();mode="listen";revealed=false;selected=-1;render()};
-$("recall").onclick=()=>{mode="recall";selected=-1;resetActivation();render();startCues();startMic()};
+$("translateCard").onclick=()=>{const en=$("cardEn").value.trim(),ru=$("cardRu").value.trim();if(!en&&!ru)return cardStatus("Сначала продиктуй или введи фразу.");if(en&&ru){cardStatus("Обе фразы заполнены. Для нового перевода очисти ненужное поле и нажми кнопку ещё раз.");return}translateInto(en?"en":"ru",true)};
+$("listen").onclick=()=>{stopCardDictation();translationToken++;stopVoice();mode="listen";revealed=false;selected=-1;render()};
+$("recall").onclick=()=>{stopCardDictation();translationToken++;mode="recall";selected=-1;resetActivation();render();startCues();startMic()};
 $("reveal").onclick=()=>{cancelCue();if(mode==="recall"&&!finished){elapsed=clockSeconds();finished=true;stopRecognition();feedback="Ответ открыт без проверки. Время не засчитано."; }revealed=true;render()};
 $("mic").onclick=()=>{speechStartedAt=null;attemptedSpeech=false;startCues();startMic()};
 
